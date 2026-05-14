@@ -1,0 +1,64 @@
+name: Telegram Drafts
+
+on:
+  schedule:
+    # WIB is UTC+7.
+    # 10:00 WIB -> 03:00 UTC
+    - cron: "0 3 * * *"
+    # 15:00 WIB -> 08:00 UTC
+    - cron: "0 8 * * *"
+    # 19:00 WIB -> 12:00 UTC
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "Jumlah draft untuk dikirim manual"
+        required: false
+        default: "1"
+
+jobs:
+  send-drafts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Decide draft count
+        id: count
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "count=${{ inputs.count }}" >> "$GITHUB_OUTPUT"
+          else
+            hour="$(date -u +%H)"
+            if [ "$hour" = "03" ]; then
+              echo "count=2" >> "$GITHUB_OUTPUT"
+            elif [ "$hour" = "08" ]; then
+              echo "count=1" >> "$GITHUB_OUTPUT"
+            else
+              echo "count=2" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Generate and send Telegram drafts
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          MODEL: ${{ secrets.MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          AUTO_PUBLISH: "false"
+          POSTS_PER_DAY: ${{ steps.count.outputs.count }}
+          INTERACTIONS_PER_DAY: "0"
+        run: python -m x_ai_agent slot-drafts "${{ steps.count.outputs.count }}"
