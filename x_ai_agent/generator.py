@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Iterable
 
 import requests
@@ -92,20 +93,24 @@ def _generate_with_gemini(prompt: str) -> list[dict]:
     if not settings.gemini_api_key:
         raise RuntimeError("Isi OPENAI_API_KEY atau GEMINI_API_KEY di .env.")
 
-    models = [settings.gemini_model, "gemini-2.5-flash", "gemini-2.0-flash"]
+    models = [settings.gemini_model, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
     seen: set[str] = set()
     last_error = ""
     for model in models:
         if model in seen:
             continue
         seen.add(model)
-        response = _gemini_request(prompt, model)
-        if response.ok:
-            data = response.json()
-            content = data["candidates"][0]["content"]["parts"][0]["text"]
-            return _extract_json_array(content)
-        last_error = f"{response.status_code} {response.reason} saat memakai model {model}"
-        if response.status_code not in {400, 404}:
+        for attempt in range(3):
+            response = _gemini_request(prompt, model)
+            if response.ok:
+                data = response.json()
+                content = data["candidates"][0]["content"]["parts"][0]["text"]
+                return _extract_json_array(content)
+            last_error = f"{response.status_code} {response.reason} saat memakai model {model}"
+            if response.status_code not in {429, 500, 502, 503, 504}:
+                break
+            time.sleep(2 + attempt * 2)
+        if response.status_code not in {400, 404, 429, 500, 502, 503, 504}:
             break
 
     raise RuntimeError(f"Gemini API gagal: {last_error}. Cek GEMINI_MODEL atau API key.")
