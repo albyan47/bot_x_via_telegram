@@ -19,6 +19,8 @@ on:
 jobs:
   send-drafts:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +49,32 @@ jobs:
               echo "count=2" >> "$GITHUB_OUTPUT"
             fi
           fi
+
+      - name: Check required secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        shell: bash
+        run: |
+          missing=0
+          if [ -z "$GEMINI_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Set GEMINI_API_KEY or OPENAI_API_KEY in repository secrets."
+            missing=1
+          fi
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "::error::Set TELEGRAM_BOT_TOKEN in repository secrets."
+            missing=1
+          fi
+          if [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::error::Set TELEGRAM_CHAT_ID in repository secrets."
+            missing=1
+          fi
+          if [ "$missing" -eq 1 ]; then
+            exit 1
+          fi
+          echo "Required secrets are present."
 
       - name: Generate and send Telegram drafts
         env:
