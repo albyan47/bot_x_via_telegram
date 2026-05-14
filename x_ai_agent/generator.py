@@ -179,6 +179,29 @@ Sumber:
     return _generate_json_array(prompt)
 
 
+def generate_manual_draft(source_text: str, source_url: str = "") -> dict:
+    prompt = f"""Buat 1 draft post X/Instagram dari referensi manual berikut.
+
+Output JSON object dengan field:
+- kind: "manual"
+- text
+- rationale
+
+Teks posting harus terasa natural, kasual, dan tidak menunjukkan dibuat oleh sistem otomatis.
+Kalau referensi hanya berisi link tanpa isi post, jangan mengarang detail spesifik. Buat draft yang meminta konteks tambahan secara halus.
+
+Referensi:
+{json.dumps({"url": source_url, "text": source_text[:2000]}, ensure_ascii=False)}
+"""
+    result = _generate_json_array(f"""Balas dalam JSON array berisi 1 object.
+
+{prompt}
+""")
+    if not result:
+        raise ValueError("Model tidak menghasilkan draft manual.")
+    return result[0]
+
+
 def _generate_json_array(prompt: str) -> list[dict]:
     if not settings.openai_api_key:
         return _generate_with_gemini(prompt)

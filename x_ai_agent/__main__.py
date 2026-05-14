@@ -10,7 +10,12 @@ from .mobile_export import export_mobile_pack
 from .publisher import publish_tweet
 from .sources import collect_sources
 from .storage import append_jsonl, load_json, read_jsonl, save_json, write_jsonl
-from .telegram_sender import get_chat_ids, send_approved_drafts_to_telegram, send_drafts_to_telegram
+from .telegram_sender import (
+    get_chat_ids,
+    process_manual_references,
+    send_approved_drafts_to_telegram,
+    send_drafts_to_telegram,
+)
 
 
 def _tweet_id_from_source(source_id: str) -> str | None:
@@ -136,6 +141,11 @@ def send_telegram(resend: bool = False) -> None:
     print(f"Sent {count} drafts to Telegram.")
 
 
+def process_telegram_inbox() -> None:
+    count = process_manual_references()
+    print(f"Processed {count} manual Telegram references.")
+
+
 def daily_drafts() -> None:
     start_index = len(read_jsonl(settings.queue_file))
     created = run_once()
@@ -199,6 +209,7 @@ def main() -> None:
     export_parser = subparsers.add_parser("export-mobile")
     export_parser.add_argument("--all", action="store_true", help="Export semua draft, bukan hanya approved yang belum published.")
     subparsers.add_parser("telegram-chat-id")
+    subparsers.add_parser("process-telegram-inbox")
     telegram_parser = subparsers.add_parser("send-telegram")
     telegram_parser.add_argument("--resend", action="store_true", help="Kirim ulang draft yang sebelumnya sudah dikirim ke Telegram.")
     args = parser.parse_args()
@@ -219,6 +230,8 @@ def main() -> None:
         export_mobile(approved_only=not args.all)
     elif args.command == "telegram-chat-id":
         telegram_chat_ids()
+    elif args.command == "process-telegram-inbox":
+        process_telegram_inbox()
     elif args.command == "send-telegram":
         send_telegram(resend=args.resend)
 

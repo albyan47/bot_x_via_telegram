@@ -97,6 +97,24 @@ MODEL
 
 Catatan: GitHub Actions berjalan di mesin baru setiap jadwal, jadi workflow ini membuat draft baru sesuai slot lalu langsung mengirimnya ke Telegram.
 
+## Referensi Manual Telegram
+
+Anda juga bisa kirim referensi manual ke bot Telegram:
+
+```text
+ref: https://x.com/akun/status/123
+paste isi post sumber di sini
+```
+
+Atau:
+
+```text
+referensi:
+paste teks sumber di sini
+```
+
+Workflow `.github/workflows/telegram-inbox.yml` mengecek inbox bot setiap 15 menit dan membalas dengan caption siap pakai. Link X saja biasanya tidak cukup karena X membatasi akses baca tanpa API, jadi sertakan teks sumbernya juga.
+
 Publish item yang sudah di-approve:
 
 ```powershell

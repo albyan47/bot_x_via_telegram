@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any
 
 import requests
 
 from .config import settings
+from .generator import generate_manual_draft
 from .mobile_export import _instagram_caption, _row_source, _source_index
 from .storage import read_jsonl, write_jsonl
+
+
+URL_PATTERN = re.compile(r"https?://\S+", re.IGNORECASE)
 
 
 def _html(text: str) -> str:
@@ -53,6 +58,78 @@ def _send_message(text: str, source_url: str = "") -> None:
 
     response = requests.post(_telegram_api("sendMessage"), json=payload, timeout=20)
     response.raise_for_status()
+
+
+def _ack_updates(max_update_id: int) -> None:
+    requests.get(
+        _telegram_api("getUpdates"),
+        params={"offset": max_update_id + 1, "limit": 1},
+        timeout=20,
+    ).raise_for_status()
+
+
+def _manual_reference_from_text(text: str) -> tuple[str, str] | None:
+    cleaned = text.strip()
+    if not cleaned or cleaned.startswith("/"):
+        return None
+
+    lowered = cleaned.lower()
+    if lowered.startswith("ref:"):
+        cleaned = cleaned[4:].strip()
+    elif lowered.startswith("referensi:"):
+        cleaned = cleaned[10:].strip()
+    elif len(cleaned) < 40 and not URL_PATTERN.search(cleaned):
+        return None
+
+    urls = URL_PATTERN.findall(cleaned)
+    source_url = urls[0].rstrip(").,") if urls else ""
+    source_text = URL_PATTERN.sub("", cleaned).strip()
+    if not source_text:
+        source_text = cleaned
+    return source_text, source_url
+
+
+def process_manual_references() -> int:
+    if not settings.telegram_chat_id:
+        raise RuntimeError("TELEGRAM_CHAT_ID belum diisi di .env.")
+
+    response = requests.get(_telegram_api("getUpdates"), params={"limit": 20}, timeout=20)
+    response.raise_for_status()
+    updates = response.json().get("result", [])
+    processed = 0
+    max_update_id = 0
+
+    for update in updates:
+        max_update_id = max(max_update_id, update.get("update_id", 0))
+        message = update.get("message") or {}
+        chat = message.get("chat") or {}
+        if str(chat.get("id")) != str(settings.telegram_chat_id):
+            continue
+        text = message.get("text") or message.get("caption") or ""
+        parsed = _manual_reference_from_text(text)
+        if not parsed:
+            continue
+
+        source_text, source_url = parsed
+        draft = generate_manual_draft(source_text=source_text, source_url=source_url)
+        caption = _instagram_caption(draft.get("text", "").strip())
+        reply = "\n".join(
+            [
+                "<b>Draft dari referensi manual</b>",
+                "",
+                "<b>Caption:</b>",
+                f"<pre>{_html(caption)}</pre>",
+                "",
+                "<b>Sumber:</b>",
+                _html(source_url or "Teks manual dari Telegram"),
+            ]
+        )
+        _send_message(reply, source_url=source_url)
+        processed += 1
+
+    if max_update_id:
+        _ack_updates(max_update_id)
+    return processed
 
 
 def send_drafts_to_telegram(
