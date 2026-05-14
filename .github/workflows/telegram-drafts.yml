@@ -52,10 +52,10 @@ jobs:
 
       - name: Check required secrets
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || vars.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || vars.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || vars.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || vars.TELEGRAM_CHAT_ID }}
         shell: bash
         run: |
           missing=0
@@ -78,14 +78,14 @@ jobs:
 
       - name: Generate and send Telegram drafts
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
-          MODEL: ${{ secrets.MODEL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || vars.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || vars.GEMINI_MODEL }}
+          MODEL: ${{ secrets.MODEL || vars.MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || vars.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || vars.OPENAI_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || vars.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || vars.TELEGRAM_CHAT_ID }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN || vars.X_BEARER_TOKEN }}
           AUTO_PUBLISH: "false"
           POSTS_PER_DAY: ${{ steps.count.outputs.count }}
           INTERACTIONS_PER_DAY: "0"
